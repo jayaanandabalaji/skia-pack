@@ -92,7 +92,7 @@ def main():
   elif is_win:
     if is_mingw:
       args += [
-        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-D_GLIBCXX_USE_CXX11_ABI=0", "-fpermissive"]',
+        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-D_GLIBCXX_USE_CXX11_ABI=0", "-fpermissive", "-fext-numeric-literals", "-Wno-psabi"]',
         'cc="gcc"',
         'cxx="g++"'
       ]
