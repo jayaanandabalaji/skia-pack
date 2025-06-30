@@ -3,8 +3,32 @@
 import common, os, subprocess, sys, shutil
 from checkout import chdir_home
 
+def patch_pool_header():
+  """Ensure <cstdint> is included in pool.h to fix int64_t errors."""
+  path = os.path.join("gn", "src", "gn", "pool.h")
+  if not os.path.exists(path):
+    print(f"Warning: {path} does not exist for patching.")
+    return
+
+  with open(path, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+  if any("#include <cstdint>" in line for line in lines):
+    return  # Already patched
+
+  for i, line in enumerate(lines):
+    if line.strip() == '#include "gn/item.h"':
+      lines.insert(i + 1, "#include <cstdint>\n")
+      break
+
+  with open(path, "w", encoding="utf-8") as f:
+    f.writelines(lines)
+
+  print("✅ Patched pool.h with '#include <cstdint>'")
+
 def main():
   chdir_home()
+  patch_pool_header()
 
   build_type = common.build_type()
   machine = common.machine()
@@ -13,15 +37,11 @@ def main():
   target = common.target()
   ndk = common.ndk()
   is_win = common.windows()
-  is_mingw = "mingw" == host
+  is_mingw = host == "mingw"
+  isIos = target in ['ios', 'iosSim']
+  isIosSim = target == 'iosSim'
 
-  isIos = 'ios' == target or 'iosSim' == target
-  isIosSim = 'iosSim' == target
-
-  if build_type == 'Debug':
-    args = ['is_debug=true']
-  else:
-    args = ['is_official_build=true']
+  args = ['is_debug=true'] if build_type == 'Debug' else ['is_official_build=true']
 
   args += [
     f'target_cpu="{machine}"',
@@ -53,6 +73,7 @@ def main():
         args += ['extra_cflags=["-stdlib=libc++"]']
       else:
         args += ['extra_cflags=["-stdlib=libc++", "-mmacosx-version-min=10.13"]']
+
   elif target == 'linux':
     if machine == 'arm64':
       args += [
@@ -67,6 +88,7 @@ def main():
         'cc="gcc-9"',
         'cxx="g++-9"'
       ]
+
   elif is_win:
     if is_mingw:
       args += [
@@ -79,8 +101,10 @@ def main():
         'skia_use_direct3d=true',
         'extra_cflags=["-DSK_FONT_HOST_USE_SYSTEM_SETTINGS"]'
       ]
+
   elif target == 'android':
     args += [f'ndk="{ndk}"']
+
   elif target == 'wasm':
     args += [
       'skia_use_dng_sdk=false',
@@ -111,34 +135,30 @@ def main():
       'extra_cflags=["-DSK_SUPPORT_GPU=1", "-DSK_GL", "-DSK_DISABLE_LEGACY_SHADERCONTEXT"]'
     ]
 
-  # Detect ninja from PATH
   ninja_path = shutil.which("ninja") or shutil.which("ninja.exe")
   if not ninja_path:
-    raise FileNotFoundError("ninja not found in PATH")
+    raise FileNotFoundError("❌ 'ninja' not found in PATH")
 
   env = os.environ.copy()
 
   if is_mingw:
     os.chdir("gn")
-    subprocess.check_call(["python", "build/gen.py", "--out-path=out/" + machine, "--platform=mingw"], env=env)
-    subprocess.check_call([ninja_path, "-C", "out/" + machine], env=env)
+    subprocess.check_call(["python", "build/gen.py", f"--out-path=out/{machine}", "--platform=mingw"], env=env)
+    subprocess.check_call([ninja_path, "-C", f"out/{machine}"], env=env)
     os.chdir("..")
 
-  os.chdir('skia')
+  os.chdir("skia")
+  out = os.path.join("out", f"{build_type}-{target}-{machine}")
 
-  out = os.path.join('out', build_type + '-' + target + '-' + machine)
+  gn = "gn.exe" if is_win else "gn"
+  gn_path = os.path.join("..", "gn", "out", machine, gn) if is_mingw else os.path.join("bin", gn)
 
-  gn = 'gn.exe' if is_win else 'gn'
-  if is_mingw:
-    gn_path = os.path.join('..', 'gn', 'out', machine, gn)
-  else:
-    gn_path = os.path.join('bin', gn)
-
-  print([gn_path, 'gen', out, '--args=' + ' '.join(args)])
-  subprocess.check_call([gn_path, 'gen', out, '--args=' + ' '.join(args)], env=env)
-  subprocess.check_call([ninja_path, '-C', out, 'skia', 'modules'], env=env)
+  print("🛠 Generating build with GN:", gn_path)
+  subprocess.check_call([gn_path, "gen", out, "--args=" + " ".join(args)], env=env)
+  print("🏗 Building with ninja:", ninja_path)
+  subprocess.check_call([ninja_path, "-C", out, "skia", "modules"], env=env)
 
   return 0
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   sys.exit(main())
