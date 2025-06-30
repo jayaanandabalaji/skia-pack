@@ -24,7 +24,7 @@ def patch_pool_header():
   with open(path, "w", encoding="utf-8") as f:
     f.writelines(lines)
 
-  print("✅ Patched pool.h with '#include <cstdint>'")
+  print("Patched pool.h with '#include <cstdint>'")
 
 def main():
   chdir_home()
@@ -137,7 +137,7 @@ def main():
 
   ninja_path = shutil.which("ninja") or shutil.which("ninja.exe")
   if not ninja_path:
-    raise FileNotFoundError("❌ 'ninja' not found in PATH")
+    raise FileNotFoundError(" 'ninja' not found in PATH")
 
   env = os.environ.copy()
 
