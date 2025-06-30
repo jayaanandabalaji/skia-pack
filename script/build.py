@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-import common, os, subprocess, sys
+import common, os, subprocess, sys, shutil
 from checkout import chdir_home
 
 def main():
@@ -15,8 +15,6 @@ def main():
   is_win = common.windows()
   is_mingw = "mingw" == host
 
-  tools_dir = "depot_tools"
-  ninja = 'ninja.exe' if is_win else 'ninja'
   isIos = 'ios' == target or 'iosSim' == target
   isIosSim = 'iosSim' == target
 
@@ -26,7 +24,7 @@ def main():
     args = ['is_official_build=true']
 
   args += [
-    'target_cpu="' + machine + '"',
+    f'target_cpu="{machine}"',
     'skia_use_system_expat=false',
     'skia_use_system_libjpeg_turbo=false',
     'skia_use_system_libpng=false',
@@ -35,20 +33,14 @@ def main():
     'skia_use_sfntly=false',
     'skia_use_freetype=true',
     'skia_use_system_freetype2=false',
-    # 'skia_use_harfbuzz=true',
     'skia_use_system_harfbuzz=false',
     'skia_pdf_subset_harfbuzz=true',
-    # 'skia_use_icu=true',
     'skia_use_system_icu=false',
-    # 'skia_enable_skshaper=true',
-    # 'skia_enable_svg=true',
     'skia_enable_skottie=true'
   ]
 
-  if 'macos' == target or isIos:
+  if target == 'macos' or isIos:
     args += [
-      # 'skia_enable_gpu=true',
-      # 'skia_use_gl=true',
       'skia_use_metal=true',
       'extra_cflags_cc=["-frtti"]'
     ]
@@ -57,83 +49,72 @@ def main():
       if isIosSim:
         args += ['ios_use_simulator=true']
     else:
-      if 'arm64' == machine:
+      if machine == 'arm64':
         args += ['extra_cflags=["-stdlib=libc++"]']
       else:
         args += ['extra_cflags=["-stdlib=libc++", "-mmacosx-version-min=10.13"]']
-  elif 'linux' == target:
-    if 'arm64' == machine:
-        # TODO: use clang on all targets!
-        args += [
-            'skia_gl_standard="gles"',
-            'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-flax-vector-conversions=all", "-D_GLIBCXX_USE_CXX11_ABI=0"]',
-            'cc="clang"',
-            'cxx="clang++"',
-        ]
+  elif target == 'linux':
+    if machine == 'arm64':
+      args += [
+        'skia_gl_standard="gles"',
+        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-flax-vector-conversions=all", "-D_GLIBCXX_USE_CXX11_ABI=0"]',
+        'cc="clang"',
+        'cxx="clang++"'
+      ]
     else:
-        args += [
-            'extra_cflags_cc=["-fno-exceptions", "-fno-rtti","-D_GLIBCXX_USE_CXX11_ABI=0"]',
-            'cc="gcc-9"',
-            'cxx="g++-9"',
-        ]
+      args += [
+        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-D_GLIBCXX_USE_CXX11_ABI=0"]',
+        'cc="gcc-9"',
+        'cxx="g++-9"'
+      ]
   elif is_win:
     if is_mingw:
       args += [
-        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti","-D_GLIBCXX_USE_CXX11_ABI=0", "-fpermissive"]',
+        'extra_cflags_cc=["-fno-exceptions", "-fno-rtti", "-D_GLIBCXX_USE_CXX11_ABI=0", "-fpermissive"]',
         'cc="gcc"',
-        'cxx="g++"',
+        'cxx="g++"'
       ]
     else:
       args += [
-        # 'skia_use_angle=true',
         'skia_use_direct3d=true',
         'extra_cflags=["-DSK_FONT_HOST_USE_SYSTEM_SETTINGS"]'
       ]
-  elif 'android' == target:
+  elif target == 'android':
+    args += [f'ndk="{ndk}"']
+  elif target == 'wasm':
     args += [
-      'ndk="'+ ndk + '"'
-    ]
-  elif 'wasm' == target:
-    # brew install emscripten binaryen llvm nodejs
-    # echo "BINARYEN_ROOT = '/usr/local'" >> ~/.emscripten
-    # echo "LLVM_ROOT = '/opt/homebrew/opt/llvm/bin'" >> ~/.emscripten
-    # echo "NODE_JS = '/opt/homebrew/bin/node'" >> ~/.emscripten
-
-    # see skia/modules/canvaskit/compile.sh for reference:
-    args += [
-        'skia_use_dng_sdk=false',
-        'skia_use_libjpeg_turbo_decode=true',
-        'skia_use_libjpeg_turbo_encode=true',
-        'skia_use_libpng_decode=true',
-        'skia_use_libpng_encode=true',
-        'skia_use_libwebp_decode=true',
-        'skia_use_libwebp_encode=true',
-        'skia_use_wuffs=true',
-        'skia_use_lua=false',
-        'skia_use_webgl=true',
-        'skia_use_piex=false',
-        'skia_use_system_libpng=false',
-        'skia_use_system_freetype2=false',
-        'skia_use_system_libjpeg_turbo=false',
-        'skia_use_system_libwebp=false',
-        'skia_enable_tools=false',
-        'skia_enable_fontmgr_custom_directory=false',
-        'skia_enable_fontmgr_custom_embedded=true',
-        'skia_enable_fontmgr_custom_empty=false',
-        'skia_use_webgl=true',
-        'skia_gl_standard="webgl"',
-        'skia_use_gl=true',
-        'skia_enable_gpu=true',
-        'skia_enable_svg=true', # other targets have this set in skia.gni
-        'skia_use_expat=true',   # other targets have this set in skia.gni
-        'extra_cflags=["-DSK_SUPPORT_GPU=1", "-DSK_GL", "-DSK_DISABLE_LEGACY_SHADERCONTEXT"]'
+      'skia_use_dng_sdk=false',
+      'skia_use_libjpeg_turbo_decode=true',
+      'skia_use_libjpeg_turbo_encode=true',
+      'skia_use_libpng_decode=true',
+      'skia_use_libpng_encode=true',
+      'skia_use_libwebp_decode=true',
+      'skia_use_libwebp_encode=true',
+      'skia_use_wuffs=true',
+      'skia_use_lua=false',
+      'skia_use_webgl=true',
+      'skia_use_piex=false',
+      'skia_use_system_libpng=false',
+      'skia_use_system_freetype2=false',
+      'skia_use_system_libjpeg_turbo=false',
+      'skia_use_system_libwebp=false',
+      'skia_enable_tools=false',
+      'skia_enable_fontmgr_custom_directory=false',
+      'skia_enable_fontmgr_custom_embedded=true',
+      'skia_enable_fontmgr_custom_empty=false',
+      'skia_use_webgl=true',
+      'skia_gl_standard="webgl"',
+      'skia_use_gl=true',
+      'skia_enable_gpu=true',
+      'skia_enable_svg=true',
+      'skia_use_expat=true',
+      'extra_cflags=["-DSK_SUPPORT_GPU=1", "-DSK_GL", "-DSK_DISABLE_LEGACY_SHADERCONTEXT"]'
     ]
 
-  if 'linux' == host and 'arm64' == host_machine:
-    tools_dir = 'tools'
-    ninja = 'ninja-linux-arm64'
-
-  ninja_path = os.path.join('..', tools_dir, ninja)
+  # Detect ninja from PATH
+  ninja_path = shutil.which("ninja") or shutil.which("ninja.exe")
+  if not ninja_path:
+    raise FileNotFoundError("ninja not found in PATH")
 
   env = os.environ.copy()
 
