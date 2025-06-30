@@ -34,7 +34,7 @@ jobs:
       - run: python3 script/checkout.py --version ${{ env.version }}
       - run: python3 script/build.py --build-type ${{ matrix.build_type }} --target ${{ matrix.target }} --machine ${{ matrix.machine }}
       - run: python3 script/archive.py --version ${{ env.version }} --build-type  ${{ matrix.build_type }} --target ${{ matrix.target }} --machine ${{ matrix.machine }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-${{ matrix.target }}-${{ matrix.build_type }}-${{ matrix.machine }}.zip
           path: '*.zip'
@@ -59,7 +59,7 @@ jobs:
       - run: PATH=/usr/lib/binutils-2.26/bin:$PATH python3 script/checkout.py --version ${{ env.version }}
       - run: PATH=/usr/lib/binutils-2.26/bin:$PATH python3 script/build.py --build-type ${{ matrix.build_type }}
       - run: PATH=/usr/lib/binutils-2.26/bin:$PATH python3 script/archive.py --version ${{ env.version }} --build-type ${{ matrix.build_type }} --classifier ubuntu18
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-linux-${{ matrix.build_type }}-x64-ubuntu18.zip
           path: '*.zip'
@@ -86,7 +86,7 @@ jobs:
       - run: python3 script/checkout.py --version ${{ env.version }}
       - run: PATH=/usr/lib/binutils-2.26/bin:$PATH python3 script/build.py  --build-type ${{ matrix.build_type }}
       - run: python3 script/archive.py --version ${{ env.version }} --classifier ubuntu14  --build-type ${{ matrix.build_type }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-linux-${{ matrix.build_type }}-x64-ubuntu14.zip
           path: '*.zip'
@@ -112,7 +112,7 @@ jobs:
       - run: python3 script/checkout.py --version ${{ env.version }}
       - run: python3 script/build.py --target wasm --machine wasm --build-type ${{ matrix.build_type }}
       - run: python3 script/archive.py --version ${{ env.version }} --target wasm --machine wasm --build-type ${{ matrix.build_type }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-wasm-${{ matrix.build_type }}-wasm.zip
           path: '*.zip'
@@ -142,7 +142,7 @@ jobs:
           ndk-version: r21e
       - run: python3 script/build.py --target android --build-type ${{ matrix.build_type }} --machine ${{ matrix.machine }} --ndk ${{ steps.setup-ndk.outputs.ndk-path }}
       - run: python3 script/archive.py --version ${{ env.version }} --target android --build-type ${{ matrix.build_type }} --machine ${{ matrix.machine }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-android-${{ matrix.build_type }}-${{ matrix.machine }}.zip
           path: '*.zip'
@@ -188,7 +188,7 @@ jobs:
               python3 script/build.py --build-type ${build_type} --build-type ${build_type}
               python3 script/archive.py --version ${build_version} --build-type ${build_type}
               echo "Produced artifact at ${PWD}/${artifact_name}"
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
             name: Skia-${{ env.version }}-linux-${{ matrix.build_type }}-arm64.zip
             path: '*.zip'
@@ -221,7 +221,7 @@ jobs:
         run: python3 script/build.py --build-type ${{ matrix.build_type }}
       - shell: bash
         run: python3 script/archive.py --version ${{ env.version }} --build-type ${{ matrix.build_type }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-windows-${{ matrix.build_type }}-x64.zip
           path: '*.zip'
@@ -261,7 +261,7 @@ jobs:
         run: python3 script/build.py --build-type ${{ matrix.build_type }} --host mingw
       - shell: bash
         run: python3 script/archive.py --version ${{ env.version }} --build-type ${{ matrix.build_type }} --host mingw
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Skia-${{ env.version }}-mingw-${{ matrix.build_type }}-x64.zip
           path: '*.zip'
