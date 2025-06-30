@@ -7,7 +7,7 @@ def patch_pool_header():
   """Ensure <cstdint> is included in pool.h to fix int64_t errors."""
   path = os.path.join("gn", "src", "gn", "pool.h")
   if not os.path.exists(path):
-    print(f"Warning: {path} does not exist for patching.")
+    print(f"[WARN] {path} does not exist for patching.")
     return
 
   with open(path, "r", encoding="utf-8") as f:
@@ -24,7 +24,7 @@ def patch_pool_header():
   with open(path, "w", encoding="utf-8") as f:
     f.writelines(lines)
 
-  print("Patched pool.h with '#include <cstdint>'")
+  print("[INFO] Patched pool.h with '#include <cstdint>'")
 
 def main():
   chdir_home()
@@ -153,9 +153,10 @@ def main():
   gn = "gn.exe" if is_win else "gn"
   gn_path = os.path.join("..", "gn", "out", machine, gn) if is_mingw else os.path.join("bin", gn)
 
-  print("🛠 Generating build with GN:", gn_path)
+  print(f"[INFO] Generating build with GN: {gn_path}")
   subprocess.check_call([gn_path, "gen", out, "--args=" + " ".join(args)], env=env)
-  print("🏗 Building with ninja:", ninja_path)
+
+  print(f"[INFO] Building with ninja: {ninja_path}")
   subprocess.check_call([ninja_path, "-C", out, "skia", "modules"], env=env)
 
   return 0
